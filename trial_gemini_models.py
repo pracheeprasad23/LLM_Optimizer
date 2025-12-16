@@ -1,6 +1,6 @@
 import google.generativeai as genai
 
-genai.configure(api_key="AIzaSyDDUf4JbqD-pJbaCI_LCrNvFKz9bFrakZw")
+genai.configure(api_key="###")
 
 for m in genai.list_models():
     if "generateContent" in m.supported_generation_methods:
