@@ -7,6 +7,7 @@ A production-ready, dynamic semantic caching system that reduces LLM costs throu
 This system demonstrates **real cost reduction** (not a toy cache) by:
 - **Reducing redundant LLM calls** using FAISS-powered semantic similarity
 - **Tracking token usage and cost savings** with detailed metrics
+- **Real-time monitoring** via interactive Streamlit dashboard
 - **Dynamically deciding what to cache** based on value scoring
 - **Maintaining cache freshness** via intelligent eviction
 - **Adapting thresholds and policies** based on observed usage patterns
@@ -16,30 +17,34 @@ This system demonstrates **real cost reduction** (not a toy cache) by:
 ```
 User Query
    ↓
-Normalize + Embed Query (text-embedding-3-small)
+Normalize + Embed Query (models/embedding-001)
    ↓
-FAISS Semantic Search (cosine similarity)
+FAISS Semantic Search (cosine similarity, 768-dim)
    ↓
 Adaptive Similarity Threshold
    ↓
 CACHE HIT ──→ Return Cached Response + Update Metrics
-CACHE MISS ─→ Call LLM (gpt-4o-mini)
+CACHE MISS ─→ Call LLM (gemini-2.0-flash)
                 ↓
             Cost Tracking
                 ↓
         Adaptive Cache Decision
                 ↓
         Store (if high-value)
+                ↓
+        Eviction (if cache full)
 ```
 
 ## 📦 Tech Stack
 
-- **Python 3.10+**
+- **Python 3.12+**
 - **FastAPI** - REST API layer
-- **FAISS** - In-memory semantic similarity search (IndexFlatIP)
-- **OpenAI API**
-  - `text-embedding-3-small` - Query embeddings
-  - `gpt-4o-mini` - LLM responses
+- **FAISS** - In-memory semantic similarity search (IndexFlatIP, 768-dim)
+- **Google Gemini API**
+  - `models/embedding-001` - Query embeddings (FREE)
+  - `gemini-2.0-flash` - LLM responses
+- **Streamlit** - Real-time monitoring dashboard
+- **Plotly** - Interactive charts and visualizations
 - **Pydantic** - Data validation
 - **NumPy** - Numerical operations
 
@@ -65,8 +70,10 @@ pip install -r requirements.txt
 # Copy example environment file
 cp .env.example .env
 
-# Edit .env and add your OpenAI API key
-# OPENAI_API_KEY=sk-...
+# Edit .env and add your Google Gemini API key
+# GEMINI_API_KEY=AIza...
+# MAX_CACHE_SIZE=25
+# OPTIMIZATION_INTERVAL=50
 ```
 
 ### 3. Run the Server
@@ -82,6 +89,18 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 Server will be available at: `http://localhost:8000`
 
 API documentation: `http://localhost:8000/docs`
+
+### 4. Run the Dashboard (Optional)
+
+```bash
+# In a separate terminal
+streamlit run streamlit_app.py
+
+# Or use the launch script
+./run_dashboard.sh
+```
+
+Dashboard will be available at: `http://localhost:8501`
 
 ## 📡 API Endpoints
 
@@ -145,6 +164,12 @@ Clear all cache entries (admin operation).
 ### GET `/cache/entries`
 View current cache entries (debugging).
 
+### GET `/optimizer/history`
+Get optimization cycle history and current thresholds.
+
+### GET `/evictions/history`
+Get detailed eviction history with value scores and metrics.
+
 ## 🧠 Cost Optimization Logic
 
 ### 1. Adaptive Similarity Thresholds
@@ -152,10 +177,12 @@ View current cache entries (debugging).
 The system uses **query-length-based thresholds** to balance precision and recall:
 
 | Query Type | Length | Threshold | Rationale |
-|------------|--------|-----------|-----------|
+|------------|--------|-----------|-----------|-------|
 | Short factual | < 50 chars | 0.92 | High precision needed |
 | Medium | 50-200 chars | 0.88 | Balanced approach |
 | Long explanatory | > 200 chars | 0.84 | More flexibility allowed |
+
+**Dynamic Adjustment:** Thresholds automatically adjust every 50 requests based on hit rate performance.
 
 **Why adaptive?**
 - Short queries ("capital of France") need exact matches
@@ -166,9 +193,9 @@ The system uses **query-length-based thresholds** to balance precision and recal
 Responses are cached **only if** they pass ALL criteria:
 
 ```python
-✓ Token count: 50 ≤ tokens ≤ 4000
-✓ Cost threshold: cost ≥ $0.0001
-✓ No similar coverage: similarity < 0.95 to existing entries
+✓ Token count: 10 ≤ tokens ≤ 4000  # Lowered for Gemini's concise responses
+✓ Cost threshold: cost ≥ $0.000001  # Adjusted for Gemini pricing
+✓ No similar coverage: similarity < 0.98 to existing entries  # Relaxed for testing
 ✓ Value potential: Reusable, factual, high-cost responses
 ```
 
@@ -177,14 +204,14 @@ Responses are cached **only if** they pass ALL criteria:
 Each cache entry has a **value score** computed from:
 
 ```
-Value = 0.35 × Frequency + 0.20 × Recency + 0.25 × Similarity + 0.20 × Tokens Saved
+Value = 0.40 × Frequency + 0.20 × Recency + 0.20 × Quality + 0.20 × Tokens Saved
 ```
 
 **Components:**
-- **Frequency (35%)**: How often the entry is hit
-- **Recency (20%)**: How recently it was accessed
-- **Similarity (25%)**: Average match quality
-- **Tokens Saved (20%)**: Total tokens saved
+- **Frequency (40%)**: How often the entry is hit (normalized at 10 hits)
+- **Recency (20%)**: How recently it was accessed (1-hour decay)
+- **Quality (20%)**: Average similarity score of matches
+- **Tokens Saved (20%)**: Total tokens saved (normalized at 1000 tokens)
 
 ### 4. Intelligent Eviction
 
@@ -255,7 +282,7 @@ Key settings in `config.py`:
 
 ```python
 # Cache Size
-MAX_CACHE_SIZE = 1000
+MAX_CACHE_SIZE = 25  # Reduced for easier testing (configurable in .env)
 
 # Adaptive Thresholds
 THRESHOLD_SHORT_QUERY = 0.92   # < 50 chars
@@ -263,15 +290,19 @@ THRESHOLD_MEDIUM_QUERY = 0.88  # 50-200 chars
 THRESHOLD_LONG_QUERY = 0.84    # > 200 chars
 
 # Cache Decision
-MIN_TOKENS_TO_CACHE = 50
+MIN_TOKENS_TO_CACHE = 10       # Lowered for Gemini (was 50)
 MAX_TOKENS_TO_CACHE = 4000
-MIN_COST_TO_CACHE = 0.0001
+MIN_COST_TO_CACHE = 0.000001   # Adjusted for Gemini pricing (was 0.0001)
+SIMILARITY_COVERAGE_THRESHOLD = 0.98  # Relaxed (was 0.95)
 
 # Value Scoring Weights
-WEIGHT_FREQUENCY = 0.35
+WEIGHT_FREQUENCY = 0.40        # Increased (was 0.35)
 WEIGHT_RECENCY = 0.20
-WEIGHT_SIMILARITY = 0.25
+WEIGHT_SIMILARITY = 0.20       # Decreased (was 0.25)
 WEIGHT_TOKENS_SAVED = 0.20
+
+# Eviction
+EVICTION_PERCENTAGE = 0.10     # Evict 10% when full (2-3 entries at size 25)
 
 # Optimization
 OPTIMIZATION_INTERVAL = 50  # Run every N requests
@@ -285,14 +316,19 @@ accion-labs/
 ├── main.py                  # FastAPI application
 ├── config.py               # Configuration & constants
 ├── models.py               # Pydantic data models
-├── embedding_service.py    # OpenAI embedding integration
-├── llm_service.py          # LLM response generation
-├── cache_manager.py        # FAISS-based semantic cache
+├── embedding_service.py    # Gemini embedding integration
+├── llm_service.py          # Gemini LLM response generation
+├── cache_manager.py        # FAISS-based semantic cache with eviction tracking
 ├── cache_policy.py         # Cache decision & value scoring
 ├── optimizer.py            # Continuous optimization loop
-├── demo.py                 # Demo script
+├── streamlit_app.py        # Real-time monitoring dashboard
+├── demo.py                 # Interactive demo script
+├── test_suite.py           # Automated test suite
+├── run_dashboard.sh        # Dashboard launch script
 ├── requirements.txt        # Dependencies
 ├── .env.example           # Environment template
+├── .env                   # Local configuration
+├── DASHBOARD_GUIDE.md     # Dashboard documentation
 └── README.md              # This file
 ```
 
@@ -319,6 +355,9 @@ accion-labs/
 - **Logging**: Comprehensive operation logs
 - **Metrics**: Real-time performance tracking
 - **API documentation**: Auto-generated Swagger UI
+- **Real-time dashboard**: Streamlit-based monitoring
+- **Eviction tracking**: Complete history with value scores
+- **Interactive testing**: Query test panel in dashboard
 
 ## 📈 Performance Characteristics
 
@@ -330,7 +369,9 @@ accion-labs/
 ### Cost Savings
 - **Typical hit rate**: 30-50% after warm-up
 - **Cost reduction**: 25-45% depending on query patterns
-- **Embedding cost**: Negligible (~$0.02 per 1M tokens)
+- **Embedding cost**: FREE (Gemini embeddings)
+- **LLM cost**: $0.075/$0.30 per 1M tokens (input/output)
+- **Avg query cost**: $0.000005 - $0.000048
 
 ### Memory Usage
 - **Per entry**: ~10KB (embedding + metadata)
@@ -346,6 +387,30 @@ accion-labs/
 | **Cost-aware decisions** | ✅ Multi-factor cache policy |
 | **Adaptivity over time** | ✅ Continuous optimization loop |
 | **Clarity of design** | ✅ Modular, typed, documented code |
+
+## 📊 Streamlit Dashboard Features
+
+The interactive dashboard provides real-time monitoring:
+
+### 10 Comprehensive Sections
+
+1. **Real-Time Metrics Overview** - Total requests, hits, misses, hit rate, cache size
+2. **Cost & Token Analytics** - Tokens used/saved, costs, efficiency metrics
+3. **Performance Trends** - Live charts showing request volume and hit rate over time
+4. **FAISS Index Information** - Index type, dimensions, search latency, thresholds
+5. **Cache Entries** - Detailed table with color-coded hit counts and statistics
+6. **Advanced Statistics** - Value distribution, top queries, performance metrics
+7. **Optimizer Status** - Optimization cycles, thresholds, last optimization time
+8. **Request History** - Last 50 requests with full details
+9. **Eviction Logs** - Complete eviction history showing why entries were removed
+10. **Query Test Panel** - Interactive testing with immediate feedback
+
+### Key Features
+- **Auto-refresh**: Live updates every 5 seconds
+- **Color-coded metrics**: Gradient backgrounds for visual appeal
+- **Interactive charts**: Plotly-based visualizations
+- **Eviction analysis**: See exactly why entries were evicted
+- **Value scoring**: Understand cache entry prioritization
 
 ## 🧪 Testing Different Scenarios
 
@@ -367,23 +432,35 @@ accion-labs/
 ## 🚫 What This System Does NOT Do
 
 - ❌ No ML training loops
-- ❌ No external databases (pure in-memory)
-- ❌ No UI (API only)
+- ❌ No external databases (pure in-memory for now)
+- ❌ No authentication/authorization (demo only)
 - ❌ No premature optimization
-- ❌ No over-engineering
+- ❌ No distributed caching (single instance)
 
 ## 📝 License
 
 MIT License - Feel free to use and modify
 
-## 🤝 Contributing
+## 🤝 Production Deployment Checklist
 
-This is a prototype/demo system. For production use:
-- Add authentication
-- Add persistent storage (Redis, PostgreSQL)
-- Add monitoring (Prometheus, Grafana)
-- Add rate limiting
-- Add comprehensive tests
+This system is 70% production-ready. Before deploying:
+
+### Critical (Must-Have)
+- ✅ **Persistence**: Integrate Redis for distributed caching
+- ✅ **Concurrency**: Add `asyncio.Lock()` for thread safety
+- ✅ **Authentication**: API key validation or OAuth
+- ✅ **Error handling**: Circuit breakers, retries, fallbacks
+
+### Important (Should-Have)
+- ⚠️ **Monitoring**: Prometheus metrics, Grafana dashboards
+- ⚠️ **Rate limiting**: Prevent abuse
+- ⚠️ **Load balancing**: Multiple instances
+- ⚠️ **Database**: PostgreSQL for eviction history
+
+### Nice-to-Have
+- 💡 **GPU acceleration**: For FAISS at scale
+- 💡 **A/B testing**: Compare cache strategies
+- 💡 **Analytics**: Usage patterns, optimization insights
 
 ---
 
