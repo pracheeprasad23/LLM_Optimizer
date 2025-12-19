@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Cost & Resource Optimization Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --color-bg-primary: #f5f5f5;
+            --color-bg-secondary: #ffffff;
+            --color-text-primary: #1a1a1a;
+            --color-text-secondary: #666666;
+            --color-primary: #2563eb;
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-error: #ef4444;
+            --color-border: #e5e7eb;
+            --spacing-8: 8px;
+            --spacing-16: 16px;
+            --spacing-24: 24px;
+            --radius-8: 8px;
+            --radius-12: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-24);
+        }
+
+        .header {
+            margin-bottom: var(--spacing-24);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: var(--spacing-8);
+        }
+
+        .header-meta {
+            display: flex;
+            gap: var(--spacing-16);
+            align-items: center;
+            color: var(--color-text-secondary);
+            font-size: 14px;
+        }
+
+        .time-range-selector {
+            display: flex;
+            gap: var(--spacing-8);
+            margin-top: var(--spacing-16);
+        }
+
+        .btn {
+            padding: var(--spacing-8) var(--spacing-16);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-8);
+            background: var(--color-bg-secondary);
+            color: var(--color-text-primary);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+        }
+
+        .btn.active {
+            background: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-16);
+            margin-bottom: var(--spacing-24);
+        }
+
+        .metric-card {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-12);
+            padding: var(--spacing-16);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--spacing-8);
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-8);
+        }
+
+        .metric-delta {
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-8);
+        }
+
+        .delta-positive {
+            color: var(--color-success);
+        }
+
+        .delta-negative {
+            color: var(--color-error);
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: var(--spacing-16);
+            margin-bottom: var(--spacing-24);
+        }
+
+        .chart-container {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-12);
+            padding: var(--spacing-16);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: var(--spacing-16);
+            color: var(--color-text-primary);
+        }
+
+        .table-container {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-12);
+            padding: var(--spacing-16);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .table-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: var(--spacing-16);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background: #f9fafb;
+            padding: var(--spacing-12);
+            text-align: left;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        td {
+            padding: var(--spacing-12);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-info {
+            background: #dbeafe;
+            color: #0c2340;
+        }
+
+        .loading {
+            text-align: center;
+            padding: var(--spacing-24);
+            color: var(--color-text-secondary);
+        }
+
+        .spinner {
+            border: 3px solid var(--color-border);
+            border-top: 3px solid var(--color-primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--spacing-16);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-24);
+            color: var(--color-text-secondary);
+        }
+
+        .filters {
+            display: flex;
+            gap: var(--spacing-16);
+            margin-bottom: var(--spacing-24);
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-8);
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+        }
+
+        select, input {
+            padding: var(--spacing-8) var(--spacing-12);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-8);
+            font-size: 14px;
+            background: var(--color-bg-secondary);
+            color: var(--color-text-primary);
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .row {
+            display: flex;
+            gap: var(--spacing-16);
+        }
+
+        .col {
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: var(--spacing-16);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>LLM Optimizer</h1>
+            <div class="header-meta">
+                <span>Real-time Cost & Resource Tracking</span>
+                <span id="last-updated">Last updated: Just now</span>
+            </div>
+
+            <!-- Time Range Selector -->
+            <div class="time-range-selector">
+                <button class="btn active" onclick="setTimeRange(1)">24H</button>
+                <button class="btn" onclick="setTimeRange(7)">7D</button>
+                <button class="btn" onclick="setTimeRange(30)">30D</button>
+                <button class="btn" onclick="setTimeRange('custom')">Custom</button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-group">
+                <label class="filter-label">Model</label>
+                <select id="modelFilter" onchange="applyFilters()">
+                    <option value="">All Models</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="gpt-4">GPT-4</option>
+                    <option value="claude-3">Claude 3</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Team</label>
+                <select id="teamFilter" onchange="applyFilters()">
+                    <option value="">All Teams</option>
+                    <option value="internal-chatbot">Internal Chatbot</option>
+                    <option value="customer-support">Customer Support</option>
+                    <option value="research">Research</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Min Cost ($)</label>
+                <input type="number" id="minCost" placeholder="0" min="0" onchange="applyFilters()">
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total Cost</div>
+                <div class="metric-value" id="totalCost">$0.00</div>
+                <div class="metric-delta delta-positive">↓ 12% from yesterday</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Total Tokens</div>
+                <div class="metric-value" id="totalTokens">0</div>
+                <div class="metric-delta delta-positive">↑ 5.2% vs avg</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Avg Latency</div>
+                <div class="metric-value" id="avgLatency">0ms</div>
+                <div class="metric-delta delta-positive">↓ 8% improvement</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Cache Hit Rate</div>
+                <div class="metric-value" id="cacheHitRate">0%</div>
+                <div class="metric-delta delta-positive">↑ 3.1% vs last week</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Total Requests</div>
+                <div class="metric-value" id="totalRequests">0</div>
+                <div class="metric-delta">↑ from 2,340 requests</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Error Rate</div>
+                <div class="metric-value" id="errorRate">0%</div>
+                <div class="metric-delta delta-positive">↓ 0.2% vs last hour</div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title">Cost Trend (24H)</div>
+                <canvas id="costTrendChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Model Distribution</div>
+                <canvas id="modelDistributionChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Token Usage by Model</div>
+                <canvas id="tokenUsageChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Latency Distribution</div>
+                <canvas id="latencyDistributionChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Cache Performance</div>
+                <canvas id="cachePerformanceChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">API Response Times</div>
+                <canvas id="responseTimesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Requests Table -->
+        <div class="table-container">
+            <div class="table-title">Recent Requests</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Model</th>
+                        <th>Prompt Tokens</th>
+                        <th>Output Tokens</th>
+                        <th>Total Tokens</th>
+                        <th>Cost</th>
+                        <th>Latency (ms)</th>
+                        <th>Status</th>
+                        <th>Team</th>
+                        <th>User</th>
+                    </tr>
+                </thead>
+                <tbody id="requestsTableBody">
+                    <tr>
+                        <td colspan="10" class="empty-state">
+                            <div class="spinner"></div>
+                            <p>Loading metrics data...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:8000';
+
+        // Global state
+        let allRequests = [];
+        let filteredRequests = [];
+        let charts = {};
+        let timeRange = 1;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDashboard();
+            setInterval(updateDashboard, 30000); // Refresh every 30 seconds
+        });
+
+        function setTimeRange(range) {
+            timeRange = range;
+            document.querySelectorAll('.time-range-selector .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            updateDashboard();
+        }
+
+        function applyFilters() {
+            const modelFilter = document.getElementById('modelFilter').value;
+            const teamFilter = document.getElementById('teamFilter').value;
+            const minCost = parseFloat(document.getElementById('minCost').value) || 0;
+
+            filteredRequests = allRequests.filter(req => {
+                return (!modelFilter || req.model.includes(modelFilter)) &&
+                       (!teamFilter || req.team === teamFilter) &&
+                       (parseFloat(req.cost) >= minCost);
+            });
+
+            updateDashboard();
+        }
+
+        async function updateDashboard() {
+            try {
+                // Fetch metrics from API
+                const response = await fetch(`${API_BASE_URL}/api/v1/dashboard/metrics?time_range_hours=${timeRange}`);
+                const data = await response.json();
+
+                // Fetch recent requests
+                const requestsResponse = await fetch(`${API_BASE_URL}/api/v1/requests/recent?limit=50`);
+                const requestsData = await requestsResponse.json();
+
+                allRequests = requestsData.requests || [];
+                filteredRequests = allRequests;
+
+                updateMetrics(data);
+                updateCharts(data);
+                updateTable();
+                updateLastUpdated();
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+            }
+        }
+
+        function updateMetrics(data) {
+            document.getElementById('totalCost').textContent = '$' + (data.total_cost || 0).toFixed(3);
+            document.getElementById('totalTokens').textContent = (data.total_tokens || 0).toLocaleString();
+            document.getElementById('avgLatency').textContent = Math.round(data.avg_latency_ms || 0) + 'ms';
+            document.getElementById('cacheHitRate').textContent = (data.cache_hit_rate || 0).toFixed(1) + '%';
+            document.getElementById('totalRequests').textContent = (data.total_requests || 0).toLocaleString();
+            document.getElementById('errorRate').textContent = (data.error_rate || 0).toFixed(1) + '%';
+        }
+
+        function updateCharts(data) {
+            // Cost Trend Chart
+            const hourlyData = data.hourly_trend || {};
+            const hours = Object.keys(hourlyData).slice(-24);
+            const costs = hours.map(h => hourlyData[h]?.cost || 0);
+            updateChart('costTrendChart', 'Cost Trend', hours, costs, '#2563eb', 'line');
+
+            // Model Distribution Chart
+            const modelData = data.model_usage || {};
+            const models = Object.keys(modelData);
+            const modelCounts = models.map(m => modelData[m]?.count || 0);
+            const modelColors = ['#2563eb', '#10b981', '#f59e0b', '#ef4444'];
+            updateChart('modelDistributionChart', 'Model Distribution', models, modelCounts, modelColors, 'doughnut');
+
+            // Token Usage by Model
+            const modelTokens = models.map(m => modelData[m]?.tokens || 0);
+            updateChart('tokenUsageChart', 'Token Usage', models, modelTokens, '#f59e0b', 'bar');
+
+            // Latency Distribution (mock)
+            updateChart('latencyDistributionChart', 'Latency Distribution', 
+                ['<100ms', '100-500ms', '500-1000ms', '1000-5000ms', '>5000ms'],
+                [10, 25, 30, 20, 15], '#ef4444', 'bar');
+
+            // Cache Performance
+            updateChart('cachePerformanceChart', 'Cache Performance',
+                ['Cache Hits', 'Cache Misses'],
+                [65, 35], ['#10b981', '#e5e7eb'], 'bar');
+
+            // Response Times
+            updateChart('responseTimesChart', 'API Response Times',
+                ['P50', 'P95', 'P99'],
+                [500, 2000, 5000], '#8b5cf6', 'line');
+        }
+
+        function updateChart(canvasId, label, labels, data, color, type) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            charts[canvasId] = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: type === 'doughnut' ? color : color,
+                        borderColor: type === 'doughnut' ? '#fff' : color,
+                        borderWidth: type === 'doughnut' ? 2 : 1,
+                        fill: type === 'line' ? true : false,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: type === 'doughnut',
+                            position: 'bottom'
+                        }
+                    },
+                    scales: type !== 'doughnut' ? {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f0f0f0' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    } : {}
+                }
+            });
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('requestsTableBody');
+            tbody.innerHTML = '';
+
+            if (filteredRequests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No requests found</td></tr>';
+                return;
+            }
+
+            filteredRequests.slice(0, 20).forEach(req => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${new Date(req.timestamp).toLocaleString()}</td>
+                    <td><strong>${req.model}</strong></td>
+                    <td>${req.prompt_tokens}</td>
+                    <td>${req.output_tokens}</td>
+                    <td>${req.total_tokens}</td>
+                    <td>$${req.cost}</td>
+                    <td>${req.latency_ms}ms</td>
+                    <td><span class="badge ${req.status === 'success' ? 'badge-success' : 'badge-error'}">${req.status}</span></td>
+                    <td>${req.team}</td>
+                    <td>${req.user}</td>
+                `;
+            });
+        }
+
+        function updateLastUpdated() {
+            const now = new Date();
+            document.getElementById('last-updated').textContent = `Last updated: ${now.toLocaleTimeString()}`;
+        }
+    </script>
+</body>
+</html>

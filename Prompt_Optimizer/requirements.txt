@@ -1,0 +1,4 @@
+openai
+tiktoken
+sentence-transformers
+python-dotenv
