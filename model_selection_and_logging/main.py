@@ -5,7 +5,7 @@ from selector import select_model
 from executor import execute_and_log
 
 # 🔑 PUT YOUR API KEY HERE
-GEMINI_API_KEY = "AIzaSyAnaHZdlBQ9pF8T3Daj00icxKD4QoTfvQE"
+GEMINI_API_KEY = "###"
 
 # ------------------------------------------------------------------
 # RECEIVED FROM PROMPT OPTIMIZATION TEAM
