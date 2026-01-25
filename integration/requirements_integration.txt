@@ -1,0 +1,32 @@
+# Requirements for Integrated LLM Optimization Pipeline
+
+# Core dependencies
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+
+# Prompt Optimizer dependencies
+google-generativeai>=0.3.0
+tiktoken>=0.5.0
+sentence-transformers>=2.2.0
+python-dotenv>=1.0.0
+
+# Model Selection dependencies
+# (google-generativeai already included above)
+
+# Dynamic Cache dependencies
+faiss-cpu>=1.7.4
+numpy>=1.24.0
+redis>=5.0.0
+aioredis>=2.0.0
+
+# Batching dependencies
+# (No external dependencies beyond standard library)
+
+# Metrics/Logging (optional)
+httpx>=0.25.0
+
+# Development
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+

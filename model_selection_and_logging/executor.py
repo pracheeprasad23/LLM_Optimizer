@@ -9,8 +9,11 @@ from config import MODEL_METADATA
 
 def _is_gemini_model(model_name: str) -> bool:
     """Check if model is a Gemini model."""
+    if not model_name:
+        return False
     model_lower = model_name.lower()
-    return "gemini" in model_lower or (model_name.startswith("models/") and "gemini" in model_lower)
+    # Check if "gemini" is in the model name (works for both "models/gemini-X" and "gemini-X" formats)
+    return "gemini" in model_lower
 
 
 def _calculate_cost(model_name: str, prompt_tokens: int, output_tokens: int) -> Optional[float]:
@@ -69,14 +72,33 @@ def execute_and_log(
     }
     
     # Handle non-Gemini models (return model name only, no metrics)
-    if not _is_gemini_model(model_name):
+    is_gemini = _is_gemini_model(model_name)
+    if not is_gemini:
         metrics["status"] = "unsupported_provider"
         metrics["error"] = f"Provider not yet implemented. Model '{model_name}' selected but only Gemini is currently supported."
         return None, metrics
     
     # Execute Gemini model
     try:
-        from gemini_executor import execute_gemini
+        # Import gemini_executor - handle both relative and absolute imports
+        import importlib.util
+        import sys
+        from pathlib import Path
+        
+        # Get the directory where executor.py is located
+        executor_dir = Path(__file__).parent
+        gemini_executor_path = executor_dir / "gemini_executor.py"
+        
+        if gemini_executor_path.exists():
+            # Load the module using importlib
+            spec = importlib.util.spec_from_file_location("gemini_executor", gemini_executor_path)
+            gemini_executor_module = importlib.util.module_from_spec(spec)
+            sys.modules["gemini_executor"] = gemini_executor_module
+            spec.loader.exec_module(gemini_executor_module)
+            execute_gemini = gemini_executor_module.execute_gemini
+        else:
+            # Fallback to standard import
+            from gemini_executor import execute_gemini
         
         response_text, execution_metrics = execute_gemini(
             api_key=api_key,
@@ -110,11 +132,19 @@ def execute_and_log(
         
         return response_text, metrics
         
+    except ImportError as e:
+        # Import error - gemini_executor not found
+        metrics["status"] = "error"
+        metrics["error"] = f"Failed to import gemini_executor: {str(e)}"
+        metrics["error_type"] = "ImportError"
+        return None, metrics
     except Exception as e:
-        # Error handling
+        # Error handling - capture full traceback for debugging
         metrics["status"] = "error"
         metrics["error"] = str(e)
         metrics["error_type"] = type(e).__name__
+        import traceback
+        metrics["traceback"] = traceback.format_exc()
         return None, metrics
 
 
