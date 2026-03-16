@@ -22,6 +22,57 @@ A cost optimization system that helps reduce operational costs while maintaining
 
 ---
 
+## Final Integration Execution (Integrated Cost Optimizer)
+
+Run the complete integrated pipeline from the `integrated-cost-optimizer` folder.
+
+1. Open terminal in workspace root:
+```bash
+cd path-to/accion-labs
+```
+
+2. Move to the integration module:
+```bash
+cd integrated-cost-optimizer
+```
+
+3. Create and activate virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+4. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+5. Configure environment:
+```bash
+cp .env.example .env
+```
+Update `.env` as needed:
+- `SIMULATE_LLM=true` and `SIMULATE_EMBEDDINGS=true` for no-cost simulation runs
+- or set `GEMINI_API_KEY` and disable simulation for real API runs
+
+6. Start backend:
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+7. Start dashboard (new terminal):
+```bash
+cd /Users/devbhangale/Developer/accion-labs/integrated-cost-optimizer
+source venv/bin/activate
+streamlit run streamlit_app.py
+```
+
+8. Open in browser:
+- API: `http://localhost:8000/docs`
+- Dashboard: `http://localhost:8501`
+
+---
+
 ## Progress
 
 - Researched open-source LLM cost-optimization tools (e.g., LiteLLM, GPTCache) and built a comprehensive solution combining their features with custom optimization strategies.
