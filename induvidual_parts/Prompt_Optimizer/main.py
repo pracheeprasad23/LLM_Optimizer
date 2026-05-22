@@ -1,4 +1,4 @@
-from optimizer.optimizer import optimize_prompt
+from induvidual_parts.Prompt_Optimizer.optimizer.optimizer import optimize_prompt
 import json
 
 if __name__ == "__main__":

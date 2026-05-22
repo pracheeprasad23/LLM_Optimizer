@@ -3,7 +3,7 @@ LLM service for generating responses
 """
 import google.generativeai as genai
 from typing import Tuple, Dict, Any
-from config import config
+from induvidual_parts.dynamic_cache.config import config
 
 
 class LLMService:

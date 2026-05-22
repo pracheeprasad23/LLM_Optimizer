@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from orchestrator import OptimizationOrchestrator
+from induvidual_parts.integration.orchestrator import OptimizationOrchestrator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

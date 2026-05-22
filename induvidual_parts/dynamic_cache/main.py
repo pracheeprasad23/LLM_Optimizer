@@ -9,11 +9,11 @@ import time
 import random
 from typing import Dict, Any
 
-from models import QueryRequest, QueryResponse, CacheMetrics, CacheStats
-from cache_manager import SemanticCacheManager
-from llm_service import LLMService
-from optimizer import CacheOptimizer
-from config import config
+from induvidual_parts.dynamic_cache.models import QueryRequest, QueryResponse, CacheMetrics, CacheStats
+from induvidual_parts.dynamic_cache.cache_manager import SemanticCacheManager
+from induvidual_parts.dynamic_cache.llm_service import LLMService
+from induvidual_parts.dynamic_cache.optimizer import CacheOptimizer
+from induvidual_parts.dynamic_cache.config import config
 
 # Configure logging
 logging.basicConfig(

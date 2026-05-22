@@ -1,8 +1,8 @@
 # main.py
 
 import json
-from selector import select_model
-from executor import execute_and_log
+from induvidual_parts.model_selection_and_logging.selector import select_model
+from induvidual_parts.model_selection_and_logging.executor import execute_and_log
 
 # 🔑 PUT YOUR API KEY HERE
 GEMINI_API_KEY = "###"

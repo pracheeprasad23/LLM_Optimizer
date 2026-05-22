@@ -2,7 +2,7 @@
 Adaptive cache decision policy module
 """
 from typing import Optional
-from config import config
+from induvidual_parts.dynamic_cache.config import config
 import logging
 
 logger = logging.getLogger(__name__)

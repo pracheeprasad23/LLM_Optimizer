@@ -4,7 +4,7 @@ Continuous optimization module for adaptive cache behavior
 import logging
 from typing import Dict, Any
 from datetime import datetime
-from config import config
+from induvidual_parts.dynamic_cache.config import config
 
 logger = logging.getLogger(__name__)
 

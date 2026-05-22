@@ -5,7 +5,7 @@
 import time
 import json
 from typing import Dict, Tuple, Optional
-from config import MODEL_METADATA
+from induvidual_parts.model_selection_and_logging.config import MODEL_METADATA
 
 def _is_gemini_model(model_name: str) -> bool:
     """Check if model is a Gemini model."""
@@ -98,7 +98,7 @@ def execute_and_log(
             execute_gemini = gemini_executor_module.execute_gemini
         else:
             # Fallback to standard import
-            from gemini_executor import execute_gemini
+            from induvidual_parts.model_selection_and_logging.gemini_executor import execute_gemini
         
         response_text, execution_metrics = execute_gemini(
             api_key=api_key,

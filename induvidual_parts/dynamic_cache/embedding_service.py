@@ -4,7 +4,7 @@ Embedding service for query vectorization
 import numpy as np
 from typing import List, Optional
 import google.generativeai as genai
-from config import config
+from induvidual_parts.dynamic_cache.config import config
 
 
 class EmbeddingService:

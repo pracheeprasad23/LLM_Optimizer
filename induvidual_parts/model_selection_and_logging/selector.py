@@ -3,7 +3,7 @@
 
 import time
 import math
-from config import MODEL_METADATA, MODEL_LIST
+from induvidual_parts.model_selection_and_logging.config import MODEL_METADATA, MODEL_LIST
 
 def select_model(analysis_json):
     """

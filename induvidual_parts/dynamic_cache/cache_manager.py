@@ -6,10 +6,10 @@ import numpy as np
 from typing import Optional, Tuple, List, Dict, Any
 from datetime import datetime
 import logging
-from models import CacheEntry, CacheMetrics
-from embedding_service import EmbeddingService
-from cache_policy import CacheDecisionPolicy
-from config import config
+from induvidual_parts.dynamic_cache.models import CacheEntry, CacheMetrics
+from induvidual_parts.dynamic_cache.embedding_service import EmbeddingService
+from induvidual_parts.dynamic_cache.cache_policy import CacheDecisionPolicy
+from induvidual_parts.dynamic_cache.config import config
 
 logger = logging.getLogger(__name__)
 

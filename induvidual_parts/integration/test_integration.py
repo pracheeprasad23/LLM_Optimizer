@@ -19,7 +19,7 @@ if str(integration_dir) not in sys.path:
     sys.path.insert(0, str(integration_dir))
 
 # Import orchestrator
-from orchestrator import OptimizationOrchestrator
+from induvidual_parts.integration.orchestrator import OptimizationOrchestrator
 
 
 async def test_single_query():
